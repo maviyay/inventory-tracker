@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
-import { AddCircle, Category, Opacity, RemoveCircle } from '@mui/icons-material'
+import { AddCircle, RemoveCircle } from '@mui/icons-material'
 import { firestore } from '@/firebase'
 import {
   collection,
