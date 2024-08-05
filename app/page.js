@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 
 const style = {
+  modal: {
   position: 'absolute',
   top: '50%',
   left: '50%',
@@ -28,6 +29,58 @@ const style = {
   display: 'flex',
   flexDirection: 'column',
   gap: 3,
+  },
+
+container: {
+  width: '100vw',
+  height: '100vh',
+  display: 'flex',
+  justifyContent: 'center',
+  flexDirection: 'column',
+  alignItems: 'center',
+  backgroundImage: 'url("/path/to/your/background-image.jpg")', // Replace with your background image path
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  gap: 4,
+  color: '#fff', // Change text color for better contrast
+},
+
+paper: {
+  padding: 2,
+  textAlign: 'center',
+  backgroundColor: '#fefefe', // Light background color for readability
+  color: '#333', // Darker text color for contrast
+},
+itemContainer: {
+  maxHeight: '400px',
+  overflowY: 'auto',
+  padding: 2,
+},
+gridItem: {
+  padding: 2,
+  display: 'flex',
+  justifyContent: 'space-evenly',
+  alignItems: 'center',
+},
+button: {
+  backgroundColor: '#007bff', // Primary color for buttons
+  color: '#fff',
+  '&:hover': {
+    backgroundColor: '#0056b3',
+  },
+},
+cancelButton: {
+  color: '#dc3545', // Secondary color for cancel button
+  borderColor: '#dc3545',
+  '&:hover': {
+    borderColor: '#c82333',
+  },
+},
+select: {
+  backgroundColor: '#fff', // Ensure select background is white
+},
+
+
 }
 
 export default function Home() {
@@ -94,40 +147,30 @@ export default function Home() {
         })
 
         return (
-            <Box
-              width="100vw"
-              height="100vh"
-              display={'flex'}
-              justifyContent={'center'}
-              flexDirection={'column'}
-              alignItems={'center'}
-              //gap={2}
-              bgcolor={'#f5f5f5'}
-              gap={4}
-            >
+            <Box sx={style.container}>
               <Modal
                 open={open}
                 onClose={handleClose}
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
               >
-                <Box sx={style}>
+                <Box sx={style.modal}>
                   <Typography id="modal-modal-title" variant="h6" component="h2" textAlign="center">
                     Add Item
                   </Typography>
                   <Stack width="100%" spacing={2}>
                     <TextField
-                      id="outlined-basic"
+                      id="item-name"
                       label="Item"
-                      variant="outlined"
+                      variant="standard"
                       fullWidth
                       value={itemName}
                       onChange={(e) => setItemName(e.target.value)}
                     />
                     <TextField
-                      id="outlined-basic" 
+                      id="item-quantity" 
                       label="Quantity"
-                      variant="outlined"
+                      variant="standard"
                       fullWidth
                       type='number'
                       value={itemQuantity}
@@ -140,9 +183,9 @@ export default function Home() {
                       label="Category"
                       variant="outlined"
                       fullWidth
-                      overflowY={'auto'}
                       value={itemCategory}
                       onChange={(e) => setItemCategory(e.target.value)}
+                      sx={style.select}
                     >
                       <MenuItem value={'Dairy'}>Dairy</MenuItem>
                       <MenuItem value={'Fruit'}>Fruit</MenuItem>
@@ -159,6 +202,7 @@ export default function Home() {
                       <Button
                         variant="contained"
                         color="primary"
+                        sx={style.button}
                         onClick={() => {
                           addItem(itemName.toLowerCase(), itemQuantity, itemCategory)
                           setItemName('')
@@ -172,6 +216,7 @@ export default function Home() {
                       <Button
                         variant="outlined"
                         color="secondary"
+                        sx={style.cancelButton}
                         onClick={handleClose}
                       >
                         Cancel
@@ -184,7 +229,7 @@ export default function Home() {
                 Add New Item
               </Button>
               <Box width="80%" maxWidth="800px">
-        <Paper elevation={3} sx={{ padding: 2, textAlign: 'center' }}>
+        <Paper elevation={3} sx={style.paper}>
           <Typography variant="h4" gutterBottom>
             Inventory Items
           </Typography>
@@ -207,6 +252,7 @@ export default function Home() {
                       fullWidth
                       value={searchCategory}
                       onChange={(e) => setSearchCategory(e.target.value)}
+                      sx={style.select}
                     >
                       <MenuItem value=''><b><em>All</em></b></MenuItem>
                       <MenuItem value={'Dairy'}>Dairy</MenuItem>
@@ -221,24 +267,19 @@ export default function Home() {
                     </Select>
                     </FormControl>
           </Stack>
-          <Box
-            sx={{
-              maxHeight: '400px',
-              overflowY: 'auto',
-              padding: 2,
-            }}
-          >
+          <Box sx={style.itemContainer}>
           <Grid container spacing={2}>
             {filteredInventory.map(({ name, quantity, category }) => (
               <Grid item xs={12} key={name}>
-                <Paper elevation={1} sx={{ padding: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6">
+                <Paper elevation={1} sx={style.gridItem}>
+                  <Typography variant="body1">
                     {name.charAt(0).toUpperCase() + name.slice(1)}
                   </Typography>
-                  <Typography variant="h6">
+                  <Stack direction="row" spacing={1} alignItems="center" >
+                  <Typography variant="body1">
                     Quantity: {quantity}
                   </Typography>
-                  <Typography variant="h6">
+                  <Typography variant="body1">
                     Category: {category}
                   </Typography>
                   <IconButton color="secondary" onClick={() => addItem(name.toLowerCase(), 1, category)}>
@@ -247,6 +288,7 @@ export default function Home() {
                   <IconButton color="secondary" onClick={() => removeItem(name.toLowerCase(), category)}>
                     <RemoveCircle />
                   </IconButton>
+                  </Stack>
                 </Paper>
               </Grid>
             ))}
