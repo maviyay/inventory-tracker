@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
-import { AddCircle, Category, RemoveCircle } from '@mui/icons-material'
+import { AddCircle, Category, Opacity, RemoveCircle } from '@mui/icons-material'
 import { firestore } from '@/firebase'
 import {
   collection,
@@ -38,7 +38,7 @@ container: {
   justifyContent: 'center',
   flexDirection: 'column',
   alignItems: 'center',
-  backgroundImage: 'url("/path/to/your/background-image.jpg")', // Replace with your background image path
+  backgroundImage: 'url("https://dri.es/files/cache/blog/interests-cabinet-1280w.jpg")',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   gap: 4,
