@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Stack, Typography, Button, Modal, TextField } from '@mui/material'
+import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
+import { AddCircle, Category, RemoveCircle } from '@mui/icons-material'
 import { firestore } from '@/firebase'
 import {
   collection,
@@ -19,9 +20,10 @@ const style = {
   left: '50%',
   transform: 'translate(-50%, -50%)',
   width: 400,
-  bgcolor: 'white',
-  border: '2px solid #000',
+  bgcolor: 'background.paper',
+  border: 'none',
   boxShadow: 24,
+  borderRadius: 2,
   p: 4,
   display: 'flex',
   flexDirection: 'column',
@@ -34,6 +36,9 @@ export default function Home() {
     const [open, setOpen] = useState(false)
     const [itemName, setItemName] = useState('')
     const [itemQuantity, setItemQuantity] = useState('')
+    const [itemCategory, setItemCategory] = useState('')
+    const [searchName, setSearchName] = useState('')
+    const [searchCategory, setSearchCategory] = useState('')
 
     const updateInventory = async () => {
         const snapshot = query(collection(firestore, 'inventory'))
@@ -49,28 +54,31 @@ export default function Home() {
         updateInventory()
       }, [])
 
-      const addItem = async (item, quantity) => {
+      const addItem = async (item, new_quantity, food_category) => {
         const docRef = doc(collection(firestore, 'inventory'), item)
         const docSnap = await getDoc(docRef)
-        const newQuantity = parseInt(quantity, 10)
+        const newQuantity = parseInt(new_quantity, 10)
+        const foodCategory = food_category
         if (docSnap.exists()) {
-          const { quantity:existingQuantity } = docSnap.data()
-          await setDoc(docRef, { quantity: existingQuantity + newQuantity })
+          const { quantity } = docSnap.data()
+          const temp_quantity = parseInt(quantity, 10)
+          await setDoc(docRef, { quantity: temp_quantity + newQuantity, category: foodCategory})
         } else {
-          await setDoc(docRef, { quantity: newQuantity})
+          await setDoc(docRef, { quantity: newQuantity, category: foodCategory})
         }
         await updateInventory()
       }
       
-      const removeItem = async (item) => {
+      const removeItem = async (item, food_category) => {
         const docRef = doc(collection(firestore, 'inventory'), item)
         const docSnap = await getDoc(docRef)
+        const foodCategory = food_category
         if (docSnap.exists()) {
           const { quantity } = docSnap.data()
           if (quantity === 1) {
             await deleteDoc(docRef)
           } else {
-            await setDoc(docRef, { quantity: quantity - 1 })
+            await setDoc(docRef, { quantity: quantity - 1, category: foodCategory})
           }
         }
         await updateInventory()
@@ -78,6 +86,13 @@ export default function Home() {
 
       const handleOpen = () => setOpen(true)
         const handleClose = () => setOpen(false)
+
+        const filteredInventory = inventory.filter(item => {
+          const matchesSearch = searchName === '' || item.name.includes(searchName)
+          const matchesCategory = searchCategory === '' || item.category === searchCategory
+          return matchesSearch && matchesCategory
+        })
+
         return (
             <Box
               width="100vw"
@@ -86,7 +101,9 @@ export default function Home() {
               justifyContent={'center'}
               flexDirection={'column'}
               alignItems={'center'}
-              gap={2}
+              //gap={2}
+              bgcolor={'#f5f5f5'}
+              gap={4}
             >
               <Modal
                 open={open}
@@ -95,7 +112,7 @@ export default function Home() {
                 aria-describedby="modal-modal-description"
               >
                 <Box sx={style}>
-                  <Typography id="modal-modal-title" variant="h6" component="h2">
+                  <Typography id="modal-modal-title" variant="h6" component="h2" textAlign="center">
                     Add Item
                   </Typography>
                   <Stack width="100%" spacing={2}>
@@ -108,76 +125,136 @@ export default function Home() {
                       onChange={(e) => setItemName(e.target.value)}
                     />
                     <TextField
-                      id="outlined-basic"
+                      id="outlined-basic" 
                       label="Quantity"
                       variant="outlined"
                       fullWidth
+                      type='number'
                       value={itemQuantity}
                       onChange={(e) => setItemQuantity(e.target.value)}
                     />
-                    <Button
+                    <FormControl fullWidth>
+                    <InputLabel id="demo-simple-select-label">Category</InputLabel>
+                    <Select
+                      id="outlined-basic" 
+                      label="Category"
                       variant="outlined"
-                      onClick={() => {
-                        addItem(itemName, itemQuantity)
-                        setItemName('')
-                        setItemQuantity('')
-                        handleClose()
-                      }}
+                      fullWidth
+                      overflowY={'auto'}
+                      value={itemCategory}
+                      onChange={(e) => setItemCategory(e.target.value)}
                     >
+                      <MenuItem value={'Dairy'}>Dairy</MenuItem>
+                      <MenuItem value={'Fruit'}>Fruit</MenuItem>
+                      <MenuItem value={'Veggie'}>Veggie</MenuItem>
+                      <MenuItem value={'Meat'}>Meat</MenuItem>
+                      <MenuItem value={'Seafood'}>Seafood</MenuItem>
+                      <MenuItem value={'Drinks'}>Drinks</MenuItem>
+                      <MenuItem value={'Bread'}>Bread</MenuItem>
+                      <MenuItem value={'Other'}>Other</MenuItem>
+            
+                    </Select>
+                    </FormControl>
+                    <Stack direction="row" spacing={2} justifyContent="center">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                          addItem(itemName.toLowerCase(), itemQuantity, itemCategory)
+                          setItemName('')
+                          setItemQuantity('')
+                          setItemCategory('')
+                          handleClose()
+                        }}
+                      >
                       Add
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        handleClose()
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleClose}
+                      >
+                        Cancel
+                      </Button>
+                    </Stack>
                   </Stack>
                 </Box>
               </Modal>
-              <Button variant="contained" onClick={handleOpen}>
+              <Button variant="contained" color="primary" onClick={handleOpen} startIcon={<AddCircle />}>
                 Add New Item
               </Button>
-              <Box border={'1px solid #333'}>
-                <Box
-                  width="800px"
-                  height="100px"
-                  bgcolor={'#ADD8E6'}
-                  display={'flex'}
-                  justifyContent={'center'}
-                  alignItems={'center'}
-                >
-                  <Typography variant={'h2'} color={'#333'} textAlign={'center'}>
-                    Inventory Items
-                  </Typography>
-                </Box>
-                <Stack width="800px" height="300px" spacing={2} overflow={'auto'}>
-                  {inventory.map(({name, quantity}) => (
-                    <Box
-                      key={name}
-                      width="100%"
-                      minHeight="150px"
-                      display={'flex'}
-                      justifyContent={'space-between'}
-                      alignItems={'center'}
-                      bgcolor={'#f0f0f0'}
-                      paddingX={5}
+              <Box width="80%" maxWidth="800px">
+        <Paper elevation={3} sx={{ padding: 2, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom>
+            Inventory Items
+          </Typography>
+          <Stack width="100%" spacing={2}>
+            <TextField
+              id="search-field"
+              label="Search"
+              variant="standard"
+              fullWidth
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+            />
+            <FormControl fullWidth>
+                    <InputLabel id="filter-category-label">Filter Category</InputLabel>
+                    <Select
+                      id="filter-category" 
+                      label="Filter Category"
+                      variant="outlined"
+                      overflowY={'auto'}
+                      fullWidth
+                      value={searchCategory}
+                      onChange={(e) => setSearchCategory(e.target.value)}
                     >
-                      <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
-                        {name.charAt(0).toUpperCase() + name.slice(1)}
-                      </Typography>
-                      <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
-                        Quantity: {quantity}
-                      </Typography>
-                      <Button variant="contained" onClick={() => removeItem(name)}>
-                        Remove
-                      </Button>
-                    </Box>
-                  ))}
-                </Stack>
-              </Box>
+                      <MenuItem value=''><b><em>All</em></b></MenuItem>
+                      <MenuItem value={'Dairy'}>Dairy</MenuItem>
+                      <MenuItem value={'Fruit'}>Fruit</MenuItem>
+                      <MenuItem value={'Veggie'}>Veggie</MenuItem>
+                      <MenuItem value={'Meat'}>Meat</MenuItem>
+                      <MenuItem value={'Seafood'}>Seafood</MenuItem>
+                      <MenuItem value={'Drinks'}>Drinks</MenuItem>
+                      <MenuItem value={'Bread'}>Bread</MenuItem>
+                      <MenuItem value={'Other'}>Other</MenuItem>
+            
+                    </Select>
+                    </FormControl>
+          </Stack>
+          <Box
+            sx={{
+              maxHeight: '400px',
+              overflowY: 'auto',
+              padding: 2,
+            }}
+          >
+          <Grid container spacing={2}>
+            {filteredInventory.map(({ name, quantity, category }) => (
+              <Grid item xs={12} key={name}>
+                <Paper elevation={1} sx={{ padding: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6">
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </Typography>
+                  <Typography variant="h6">
+                    Quantity: {quantity}
+                  </Typography>
+                  <Typography variant="h6">
+                    Category: {category}
+                  </Typography>
+                  <IconButton color="secondary" onClick={() => addItem(name.toLowerCase(), 1, category)}>
+                    <AddCircle />
+                  </IconButton>
+                  <IconButton color="secondary" onClick={() => removeItem(name.toLowerCase(), category)}>
+                    <RemoveCircle />
+                  </IconButton>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+          </Box>
+        </Paper>
+      </Box>
             </Box>
           )
 }
+
