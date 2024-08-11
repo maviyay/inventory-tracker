@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
-import { AddCircle, RemoveCircle } from '@mui/icons-material'
+import { AddCircle, RemoveCircle, LightbulbCircle } from '@mui/icons-material'
 import { firestore } from '@/firebase'
+import background from './background.jpg'
 import {
   collection,
   doc,
@@ -92,6 +93,9 @@ export default function Home() {
     const [itemCategory, setItemCategory] = useState('')
     const [searchName, setSearchName] = useState('')
     const [searchCategory, setSearchCategory] = useState('')
+    const [recipeOpen, setRecipeOpen] = useState(false)
+    const [recipes, setRecipes] = useState('')
+
 
     const updateInventory = async () => {
         const snapshot = query(collection(firestore, 'inventory'))
@@ -139,6 +143,12 @@ export default function Home() {
 
       const handleOpen = () => setOpen(true)
         const handleClose = () => setOpen(false)
+
+      const handleGenerate = async () => {
+        const recommendations = await getRecommendations (inventory);
+        setRecipes(recommendations.choices[0]?.message?.content || "No recommendations available.")
+        setRecipeOpen(true);
+      }
 
         const filteredInventory = inventory.filter(item => {
           const matchesSearch = searchName === '' || item.name.includes(searchName)
@@ -225,15 +235,21 @@ export default function Home() {
                   </Stack>
                 </Box>
               </Modal>
-              <Button variant="contained" color="primary" onClick={handleOpen} startIcon={<AddCircle />}>
-                Add New Item
-              </Button>
               <Box width="80%" maxWidth="800px">
         <Paper elevation={3} sx={style.paper}>
           <Typography variant="h4" gutterBottom>
             Inventory Items
           </Typography>
           <Stack width="100%" spacing={2}>
+            <Box display="flex" gap={4} justifyContent={"center"}>
+              <Button variant="contained" color="primary" onClick={handleOpen} startIcon={<AddCircle />}>
+                Add New Item
+              </Button>
+
+              <Button variant="contained" color="primary" onClick={handleGenerate} startIcon={<LightbulbCircle />}>
+                Generate Recipes
+              </Button>
+            </Box>
             <TextField
               id="search-field"
               label="Search"
