@@ -14,6 +14,7 @@ import {
   deleteDoc,
   getDoc,
 } from 'firebase/firestore'
+import { getRecipeRecommendations } from './groq.js'
 
 const style = {
   modal: {
@@ -31,6 +32,24 @@ const style = {
   flexDirection: 'column',
   gap: 3,
   },
+
+  modalRecipe: {
+    position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 700,
+  height: 450,
+  overflowY: 'auto',
+  bgcolor: 'background.paper',
+  border: 'none',
+  boxShadow: 24,
+  borderRadius: 2,
+  p: 4,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 3,
+},
 
 container: {
   width: '100vw',
@@ -95,6 +114,7 @@ export default function Home() {
     const [searchCategory, setSearchCategory] = useState('')
     const [recipeOpen, setRecipeOpen] = useState(false)
     const [recipes, setRecipes] = useState('')
+    const [recipeIndex, setRecipeIndex] = useState(0)
 
 
     const updateInventory = async () => {
@@ -141,13 +161,33 @@ export default function Home() {
         await updateInventory()
       }
 
-      const handleOpen = () => setOpen(true)
+      const handleOpen = () => {
+        setOpen(true)
+      }
         const handleClose = () => setOpen(false)
 
       const handleGenerate = async () => {
-        const recommendations = await getRecommendations (inventory);
-        setRecipes(recommendations.choices[0]?.message?.content || "No recommendations available.")
-        setRecipeOpen(true);
+        const recommendations = await getRecipeRecommendations (inventory);
+        setRecipes(recommendations.choices[0]?.message?.content.split('%%%').filter(Boolean) || "No recommendations available.")
+        setRecipeIndex(1)
+      }
+
+      const handleRecipeOpen = async () => {
+        await handleGenerate()
+        setRecipeOpen(true)
+      }
+      const handleRecipeClose = () => setRecipeOpen(false)
+
+      const handleNextRecipe = () => {
+        if (recipeIndex < recipes.length - 1) {
+            setRecipeIndex(recipeIndex + 1)
+        }
+      }
+
+      const handlePrevRecipe = () => {
+          if (recipeIndex > 0) {
+              setRecipeIndex(recipeIndex - 1)
+          }
       }
 
         const filteredInventory = inventory.filter(item => {
@@ -235,6 +275,51 @@ export default function Home() {
                   </Stack>
                 </Box>
               </Modal>
+              <Modal
+                open={recipeOpen}
+                onClose={handleRecipeClose}
+                aria-labelledby="modal-modal-title"
+                aria-describedby="modal-modal-description"
+              >
+                <Box sx={style.modalRecipe}>
+                  <Typography id="modal-modal-title" variant="h6" component="h2" textAlign="center">
+                    Your Recipes
+                  </Typography>
+                  <Stack width="100%" spacing={2} justifyContent={"space-between"}>
+                    <Typography variant="body1" textAlign="center">
+                            {recipes[recipeIndex]}
+                        </Typography>
+                    <Stack direction="row" spacing={2} justifyContent="space-evenly">
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                sx={style.button}
+                                onClick={handlePrevRecipe}
+                                disabled={recipeIndex === 1}
+                            >
+                                Prev
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                sx={style.button}
+                                onClick={handleNextRecipe}
+                                disabled={recipeIndex === recipes.length - 1}
+                            >
+                                Next
+                            </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        sx={style.button}
+                        onClick={handleRecipeClose}
+                      >
+                        Done
+                      </Button>
+                      </Stack>
+                  </Stack>
+                </Box>
+              </Modal>
               <Box width="80%" maxWidth="800px">
         <Paper elevation={3} sx={style.paper}>
           <Typography variant="h4" gutterBottom>
@@ -246,7 +331,7 @@ export default function Home() {
                 Add New Item
               </Button>
 
-              <Button variant="contained" color="primary" onClick={handleGenerate} startIcon={<LightbulbCircle />}>
+              <Button variant="contained" color="primary" onClick={handleRecipeOpen} startIcon={<LightbulbCircle />}>
                 Generate Recipes
               </Button>
             </Box>
@@ -264,11 +349,10 @@ export default function Home() {
                       id="filter-category" 
                       label="Filter Category"
                       variant="outlined"
-                      overflowY={'auto'}
                       fullWidth
                       value={searchCategory}
                       onChange={(e) => setSearchCategory(e.target.value)}
-                      sx={style.select}
+                      sx={{ ...style.select, overflowY: 'auto' }} // Move overflowY here
                     >
                       <MenuItem value=''><b><em>All</em></b></MenuItem>
                       <MenuItem value={'Dairy'}>Dairy</MenuItem>

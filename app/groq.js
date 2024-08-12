@@ -1,12 +1,16 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY });
+const groq = new Groq({ 
+    apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true});
 
 export async function getRecipeRecommendations(pantryItems) {
   const itemList = pantryItems.map(item => item.name).join(', ');
-  const prompt = `Generate at least 5 recipe recommendations based on the following ingredients: ${itemList}. Provide a list of recipes that use these ingredients.`;
+  console.log("Item List:", itemList);
+  const prompt = `Generate 5 recipe recommendations based on the following ingredients: ${itemList}. Separate each recipe (with ingridients and steps) with three characters '%%%'. these characters should be placed before each recipe title`;
 
-  return groq.chat.completions.create({
+  try{
+    const response = await groq.chat.completions.create({
     messages: [
       {
         role: "user",
@@ -15,4 +19,11 @@ export async function getRecipeRecommendations(pantryItems) {
     ],
     model: "llama3-8b-8192",
   });
+
+  console.log("Groq API Response:", response);
+    return response;
+  } catch (error) {
+    console.error("Error generating recipe recommendations:", error);
+    return null;
+  }
 }
