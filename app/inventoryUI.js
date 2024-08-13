@@ -78,9 +78,8 @@ container: {
 paper: {
   padding: 2,
   textAlign: 'center',
-  backgroundColor: 'rgba(255, 255, 255, 0.9)', // Light background color for readability
+  backgroundColor: 'rgba(255, 255, 255)', // Light background color for readability
   color: '#333', // Darker text color for contrast
-  borderRadius: '10px',
 },
 
 itemContainer: {
@@ -237,6 +236,7 @@ export default function InventoryUI() {
                   </Typography>
                   <Stack width="100%" spacing={2}>
                     <TextField
+                      required
                       id="item-name"
                       label="Item"
                       variant="standard"
@@ -248,6 +248,7 @@ export default function InventoryUI() {
                       id="item-quantity" 
                       label="Quantity"
                       variant="standard"
+                      defaultValue={1}
                       fullWidth
                       type='number'
                       value={itemQuantity}
@@ -276,29 +277,50 @@ export default function InventoryUI() {
                     </Select>
                     </FormControl>
                     <Stack direction="row" spacing={2} justifyContent="center">
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        sx={style.button}
+                        onClick={setError("Camera feature coming soon!")}
+                      >
+                      Camera
+                      </Button>
                       <Button
                         variant="contained"
                         color="primary"
                         sx={style.button}
                         onClick={() => {
-                          addItem(itemName.toLowerCase(), itemQuantity, itemCategory)
-                          setItemName('')
-                          setItemQuantity('')
-                          setItemCategory('')
-                          handleClose()
+                            if (itemName) {
+                            addItem(itemName.toLowerCase(), itemQuantity, itemCategory);
+                            setItemName('');
+                            setItemQuantity('');
+                            setItemCategory('');
+                            setError(null);
+                            handleClose();
+                            } else {
+                            setError("Input item name to add item");
+                            }
                         }}
-                      >
-                      Add
-                      </Button>
+                        >
+                        Add
+                        </Button>
                       <Button
                         variant="outlined"
                         color="secondary"
                         sx={style.cancelButton}
-                        onClick={handleClose}
+                        onClick={ () => {
+                            setError(null);
+                            handleClose();
+                        }}
                       >
                         Cancel
                       </Button>
                     </Stack>
+                    {error && (
+                        <Typography sx={{ mt: 2, color: 'red', textAlign: 'center' }}>
+                            {error}
+                        </Typography>
+                    )}
                   </Stack>
                 </Box>
               </Modal>

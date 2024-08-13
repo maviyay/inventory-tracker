@@ -67,7 +67,6 @@ export default function Home() {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       color: '#fff', 
-      gap: '4',
     },
     formContainer: {
       display: 'flex',
