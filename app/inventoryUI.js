@@ -52,6 +52,15 @@ const style = {
   gap: 3,
 },
 
+signOutButton: {
+    backgroundColor: '#dc3545',
+    color: '#fff',
+    '&:hover': {
+      backgroundColor: '#c82333',
+    },
+    borderRadius: '8px',
+  },
+
 container: {
   width: '100vw',
   height: '100vh',
@@ -123,6 +132,7 @@ export default function InventoryUI() {
     const [recipeOpen, setRecipeOpen] = useState(false)
     const [recipes, setRecipes] = useState('')
     const [recipeIndex, setRecipeIndex] = useState(0)
+    const [error, setError] = useState(null)
 
 
     const updateInventory = async () => {
@@ -197,6 +207,15 @@ export default function InventoryUI() {
               setRecipeIndex(recipeIndex - 1)
           }
       }
+
+      const handleSignOut = async () => {
+        try {
+          await signOut(auth);
+          setError(null)
+        } catch (err) {
+          setError(err.message);
+        }
+      };
 
         const filteredInventory = inventory.filter(item => {
           const matchesSearch = searchName === '' || item.name.includes(searchName)
@@ -332,7 +351,7 @@ export default function InventoryUI() {
 }           
 <Paper elevation={3} sx={style.paper}>
         <Typography variant="h3" component="h1" gutterBottom>
-          Pantry Tracker
+          PantryPro Tracker
         </Typography>
         <Stack spacing={2} direction="row" mr={2} ml={2}>
           <TextField
@@ -402,6 +421,14 @@ export default function InventoryUI() {
           <Button variant="contained" sx={style.button} onClick={handleRecipeOpen} startIcon={<LightbulbCircle/>}>
             Get Recipe Recommendation
           </Button>
+          <Button vairant="contained" sx={style.signOutButton} onClick={handleSignOut}>
+            Sign Out
+            </Button>
+            {error && (
+                    <Typography color="error" variant="body2">
+                    {error}
+                    </Typography>
+                )}
         </Stack>
       </Paper> 
     </>
