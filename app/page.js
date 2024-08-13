@@ -1,402 +1,159 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
-import { AddCircle, RemoveCircle, LightbulbCircle } from '@mui/icons-material'
-import { firestore } from '@/firebase'
-import background from './background.jpg'
-import {
-  collection,
-  doc,
-  getDocs,
-  query,
-  setDoc,
-  deleteDoc,
-  getDoc,
-} from 'firebase/firestore'
-import { getRecipeRecommendations } from './groq.js'
-
-const style = {
-  modal: {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: 'none',
-  boxShadow: 24,
-  borderRadius: 2,
-  p: 4,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 3,
-  },
-
-  modalRecipe: {
-    position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 700,
-  height: 450,
-  overflowY: 'auto',
-  bgcolor: 'background.paper',
-  border: 'none',
-  boxShadow: 24,
-  borderRadius: 2,
-  p: 4,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 3,
-},
-
-container: {
-  width: '100vw',
-  height: '100vh',
-  display: 'flex',
-  justifyContent: 'center',
-  flexDirection: 'column',
-  alignItems: 'center',
-  backgroundImage: 'url("https://dri.es/files/cache/blog/interests-cabinet-1280w.jpg")',
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  gap: 4,
-  color: '#fff', // Change text color for better contrast
-},
-
-paper: {
-  padding: 2,
-  textAlign: 'center',
-  backgroundColor: '#fefefe', // Light background color for readability
-  color: '#333', // Darker text color for contrast
-},
-itemContainer: {
-  maxHeight: '400px',
-  overflowY: 'auto',
-  padding: 2,
-},
-gridItem: {
-  padding: 2,
-  display: 'flex',
-  justifyContent: 'space-evenly',
-  alignItems: 'center',
-},
-button: {
-  backgroundColor: '#007bff', // Primary color for buttons
-  color: '#fff',
-  '&:hover': {
-    backgroundColor: '#0056b3',
-  },
-},
-cancelButton: {
-  color: '#dc3545', // Secondary color for cancel button
-  borderColor: '#dc3545',
-  '&:hover': {
-    borderColor: '#c82333',
-  },
-},
-select: {
-  backgroundColor: '#fff', // Ensure select background is white
-},
-
-
-}
+import { Box, Button, TextField, Typography, Container, Paper } from '@mui/material';
+import pantryProLogo from './pantry.png'
+import { auth } from '@/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { useEffect, useState} from "react";
+import '@fontsource/poppins'
+import InventoryUI from './inventoryUI';
 
 export default function Home() {
-  // We'll add our component logic here
-    const [inventory, setInventory] = useState([])
-    const [open, setOpen] = useState(false)
-    const [itemName, setItemName] = useState('')
-    const [itemQuantity, setItemQuantity] = useState('')
-    const [itemCategory, setItemCategory] = useState('')
-    const [searchName, setSearchName] = useState('')
-    const [searchCategory, setSearchCategory] = useState('')
-    const [recipeOpen, setRecipeOpen] = useState(false)
-    const [recipes, setRecipes] = useState('')
-    const [recipeIndex, setRecipeIndex] = useState(0)
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const updateInventory = async () => {
-        const snapshot = query(collection(firestore, 'inventory'))
-        const docs = await getDocs(snapshot)
-        const inventoryList = []
-        docs.forEach((doc) => {
-          inventoryList.push({ name: doc.id, ...doc.data() })
-        })
-        setInventory(inventoryList)
-      }
-      
-      useEffect(() => {
-        updateInventory()
-      }, [])
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setEmail('');
+      setPassword('');
+      setError(null)
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
-      const addItem = async (item, new_quantity, food_category) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
-        const docSnap = await getDoc(docRef)
-        const newQuantity = parseInt(new_quantity, 10)
-        const foodCategory = food_category
-        if (docSnap.exists()) {
-          const { quantity } = docSnap.data()
-          const temp_quantity = parseInt(quantity, 10)
-          await setDoc(docRef, { quantity: temp_quantity + newQuantity, category: foodCategory})
-        } else {
-          await setDoc(docRef, { quantity: newQuantity, category: foodCategory})
-        }
-        await updateInventory()
-      }
-      
-      const removeItem = async (item, food_category) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
-        const docSnap = await getDoc(docRef)
-        const foodCategory = food_category
-        if (docSnap.exists()) {
-          const { quantity } = docSnap.data()
-          if (quantity === 1) {
-            await deleteDoc(docRef)
-          } else {
-            await setDoc(docRef, { quantity: quantity - 1, category: foodCategory})
-          }
-        }
-        await updateInventory()
-      }
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      setEmail('');
+      setPassword('');
+      setIsSignUp(false); // Switch back to sign-in form
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
-      const handleOpen = () => {
-        setOpen(true)
-      }
-        const handleClose = () => setOpen(false)
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
-      const handleGenerate = async () => {
-        const recommendations = await getRecipeRecommendations (inventory);
-        setRecipes(recommendations.choices[0]?.message?.content.split('%%%').filter(Boolean) || "No recommendations available.")
-        setRecipeIndex(1)
-      }
+  const style = {
+    container: {
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      alignItems: 'center',
+      backgroundImage: 'url("https://dri.es/files/cache/blog/interests-cabinet-1280w.jpg")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      color: '#fff', // Change text color for better contrast
+    },
+    button: {
+      backgroundColor: '#dc3545', // Primary color for buttons
+      color: '#fff',
+      '&:hover': {
+        backgroundColor: '#c82333',
+      },
+      borderRadius: '8px',
+    },
+    formContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      alignItems: 'center',
+      padding: '32px',
+    },
+  }
 
-      const handleRecipeOpen = async () => {
-        await handleGenerate()
-        setRecipeOpen(true)
-      }
-      const handleRecipeClose = () => setRecipeOpen(false)
-
-      const handleNextRecipe = () => {
-        if (recipeIndex < recipes.length - 1) {
-            setRecipeIndex(recipeIndex + 1)
-        }
-      }
-
-      const handlePrevRecipe = () => {
-          if (recipeIndex > 0) {
-              setRecipeIndex(recipeIndex - 1)
-          }
-      }
-
-        const filteredInventory = inventory.filter(item => {
-          const matchesSearch = searchName === '' || item.name.includes(searchName)
-          const matchesCategory = searchCategory === '' || item.category === searchCategory
-          return matchesSearch && matchesCategory
-        })
-
-        return (
-            <Box sx={style.container}>
-              <Modal
-                open={open}
-                onClose={handleClose}
-                aria-labelledby="modal-modal-title"
-                aria-describedby="modal-modal-description"
-              >
-                <Box sx={style.modal}>
-                  <Typography id="modal-modal-title" variant="h6" component="h2" textAlign="center">
-                    Add Item
-                  </Typography>
-                  <Stack width="100%" spacing={2}>
-                    <TextField
-                      id="item-name"
-                      label="Item"
-                      variant="standard"
-                      fullWidth
-                      value={itemName}
-                      onChange={(e) => setItemName(e.target.value)}
-                    />
-                    <TextField
-                      id="item-quantity" 
-                      label="Quantity"
-                      variant="standard"
-                      fullWidth
-                      type='number'
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                    />
-                    <FormControl fullWidth>
-                    <InputLabel id="demo-simple-select-label">Category</InputLabel>
-                    <Select
-                      id="outlined-basic" 
-                      label="Category"
-                      variant="outlined"
-                      fullWidth
-                      value={itemCategory}
-                      onChange={(e) => setItemCategory(e.target.value)}
-                      sx={style.select}
-                    >
-                      <MenuItem value={'Dairy'}>Dairy</MenuItem>
-                      <MenuItem value={'Fruit'}>Fruit</MenuItem>
-                      <MenuItem value={'Veggie'}>Veggie</MenuItem>
-                      <MenuItem value={'Meat'}>Meat</MenuItem>
-                      <MenuItem value={'Seafood'}>Seafood</MenuItem>
-                      <MenuItem value={'Drinks'}>Drinks</MenuItem>
-                      <MenuItem value={'Bread'}>Bread</MenuItem>
-                      <MenuItem value={'Other'}>Other</MenuItem>
-            
-                    </Select>
-                    </FormControl>
-                    <Stack direction="row" spacing={2} justifyContent="center">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        sx={style.button}
-                        onClick={() => {
-                          addItem(itemName.toLowerCase(), itemQuantity, itemCategory)
-                          setItemName('')
-                          setItemQuantity('')
-                          setItemCategory('')
-                          handleClose()
-                        }}
-                      >
-                      Add
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="secondary"
-                        sx={style.cancelButton}
-                        onClick={handleClose}
-                      >
-                        Cancel
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Box>
-              </Modal>
-              <Modal
-                open={recipeOpen}
-                onClose={handleRecipeClose}
-                aria-labelledby="modal-modal-title"
-                aria-describedby="modal-modal-description"
-              >
-                <Box sx={style.modalRecipe}>
-                  <Typography id="modal-modal-title" variant="h6" component="h2" textAlign="center">
-                    Your Recipes
-                  </Typography>
-                  <Stack width="100%" spacing={2} justifyContent={"space-between"}>
-                    <Typography variant="body1" textAlign="center">
-                            {recipes[recipeIndex]}
-                        </Typography>
-                    <Stack direction="row" spacing={2} justifyContent="space-evenly">
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                sx={style.button}
-                                onClick={handlePrevRecipe}
-                                disabled={recipeIndex === 1}
-                            >
-                                Prev
-                            </Button>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                sx={style.button}
-                                onClick={handleNextRecipe}
-                                disabled={recipeIndex === recipes.length - 1}
-                            >
-                                Next
-                            </Button>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        sx={style.button}
-                        onClick={handleRecipeClose}
-                      >
-                        Done
-                      </Button>
-                      </Stack>
-                  </Stack>
-                </Box>
-              </Modal>
-              <Box width="80%" maxWidth="800px">
-        <Paper elevation={3} sx={style.paper}>
-          <Typography variant="h4" gutterBottom>
-            Inventory Items
-          </Typography>
-          <Stack width="100%" spacing={2}>
-            <Box display="flex" gap={4} justifyContent={"center"}>
-              <Button variant="contained" color="primary" onClick={handleOpen} startIcon={<AddCircle />}>
-                Add New Item
-              </Button>
-
-              <Button variant="contained" color="primary" onClick={handleRecipeOpen} startIcon={<LightbulbCircle />}>
-                Generate Recipes
-              </Button>
-            </Box>
-            <TextField
-              id="search-field"
-              label="Search"
-              variant="standard"
-              fullWidth
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
+  return (
+    <main className="flex min-h-screen bg-white">
+      {user ? (
+        <Box sx={style.container}>
+        <InventoryUI />
+        <Button vairant="contained" sx={style.button} onClick={handleSignOut}>
+          Sign Out
+        </Button>
+        </Box>
+      ) : (
+        <div className='flex items-center justify-center p-20 position-relative'>
+          <h1 className="font-[poppins] text-blue-500 font-extrabold text-3xl text-center pt-8">
+        Hello!
+        Welcome to PantryPro
+        <br/>
+        Sign up to get started!
+        </h1>
+        <div className="flex items-center justify-center w-full max-w-3xl max-h-screen bg-white"> 
+        <img
+          src={pantryProLogo.src}
+          alt="Pantry Pro Logo"
+          className="object-cover pr-20"
+        />
+        <div className={`flex items-center ${error == null ? "bg-gradient-to-b from-blue-100 to-green-100 p-2" : "bg-gradient-to-b from-red-600 to-pink-300 p-1"} rounded-lg shadow-lg w-full max-w-md`}>
+          <div className="p-8 bg-white rounded-lg shadow-lg">
+          <h1 className="font-[poppins] font-bold text-5xl text-blue-900 sm:text-5xl text-center mb-6">
+            {isSignUp ? 'Sign-Up' : 'Sign In'}
+          </h1>
+          <form
+            onSubmit={isSignUp ? handleSignUp : handleSignIn}
+            className="flex flex-col items-center"
+          >
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="p-3 font-[poppins] border border-gray-200 rounded mb-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+              required
             />
-            <FormControl fullWidth>
-                    <InputLabel id="filter-category-label">Filter Category</InputLabel>
-                    <Select
-                      id="filter-category" 
-                      label="Filter Category"
-                      variant="outlined"
-                      fullWidth
-                      value={searchCategory}
-                      onChange={(e) => setSearchCategory(e.target.value)}
-                      sx={{ ...style.select, overflowY: 'auto' }} // Move overflowY here
-                    >
-                      <MenuItem value=''><b><em>All</em></b></MenuItem>
-                      <MenuItem value={'Dairy'}>Dairy</MenuItem>
-                      <MenuItem value={'Fruit'}>Fruit</MenuItem>
-                      <MenuItem value={'Veggie'}>Veggie</MenuItem>
-                      <MenuItem value={'Meat'}>Meat</MenuItem>
-                      <MenuItem value={'Seafood'}>Seafood</MenuItem>
-                      <MenuItem value={'Drinks'}>Drinks</MenuItem>
-                      <MenuItem value={'Bread'}>Bread</MenuItem>
-                      <MenuItem value={'Other'}>Other</MenuItem>
-            
-                    </Select>
-                    </FormControl>
-          </Stack>
-          <Box sx={style.itemContainer}>
-          <Grid container spacing={2}>
-            {filteredInventory.map(({ name, quantity, category }) => (
-              <Grid item xs={12} key={name}>
-                <Paper elevation={1} sx={style.gridItem}>
-                  <Typography variant="body1">
-                    {name.charAt(0).toUpperCase() + name.slice(1)}
-                  </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center" >
-                  <Typography variant="body1">
-                    Quantity: {quantity}
-                  </Typography>
-                  <Typography variant="body1">
-                    Category: {category}
-                  </Typography>
-                  <IconButton color="secondary" onClick={() => addItem(name.toLowerCase(), 1, category)}>
-                    <AddCircle />
-                  </IconButton>
-                  <IconButton color="secondary" onClick={() => removeItem(name.toLowerCase(), category)}>
-                    <RemoveCircle />
-                  </IconButton>
-                  </Stack>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-          </Box>
-        </Paper>
-      </Box>
-            </Box>
-          )
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="p-3 font-[poppins] border border-gray-200 rounded mb-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+              required
+            />
+            <button
+              type="submit"
+              className="p-3 font-[poppins] w-full bg-slate-100 text-blue-900 font-bold rounded shadow-md hover:bg-blue-100 transition-all"
+            >
+              {isSignUp ? 'Sign Up' : 'Sign In'}
+            </button>
+          </form>
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp)
+              setError(null)
+            }}
+            className="mt-4 font-[poppins] text-blue-500"
+          >
+            {isSignUp ? 'Already have an account? Sign-In' : 'Don\'t have an account? Sign Up'}
+          </button>
+          {error && <p className="text-red-500 font-[poppins] mt-1 text-sm">{error}</p>}
+          </div>
+          </div>
+          </div>
+          </div>
+      )}
+    </main>
+  );
 }
-
