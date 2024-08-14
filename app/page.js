@@ -3,7 +3,7 @@
 import { Box, Button, TextField, Typography, Container, Paper } from '@mui/material';
 import pantryProLogo from './pantry.png'
 import { auth } from '@/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState} from "react";
 import '@fontsource/poppins'
 import InventoryUI from './inventoryUI';
@@ -41,15 +41,6 @@ export default function Home() {
       setEmail('');
       setPassword('');
       setIsSignUp(false); // Switch back to sign-in form
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      setError(null)
     } catch (err) {
       setError(err.message);
     }

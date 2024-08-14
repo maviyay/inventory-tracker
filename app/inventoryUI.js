@@ -1,5 +1,5 @@
 'use client'
-
+import { auth } from '@/firebase'
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
 import { AddCircle, RemoveCircle, LightbulbCircle } from '@mui/icons-material'
@@ -281,7 +281,7 @@ export default function InventoryUI() {
                         variant="contained"
                         color="primary"
                         sx={style.button}
-                        onClick={setError("Camera feature coming soon!")}
+                        onClick={() => setError("Camera feature coming soon!")}
                       >
                       Camera
                       </Button>
