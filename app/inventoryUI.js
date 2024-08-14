@@ -5,7 +5,6 @@ import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButt
 import { AddCircle, RemoveCircle, LightbulbCircle } from '@mui/icons-material'
 import { firestore } from '@/firebase'
 import { signOut } from 'firebase/auth'
-import background from './background.jpg'
 import {
   collection,
   doc,
