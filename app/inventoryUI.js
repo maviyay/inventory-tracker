@@ -3,18 +3,7 @@ import { auth } from '@/firebase'
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField, Paper, Grid, IconButton, Select, InputLabel, FormControl, MenuItem} from '@mui/material'
 import { AddCircle, RemoveCircle, LightbulbCircle } from '@mui/icons-material'
-import { firestore } from '@/firebase'
 import { signOut } from 'firebase/auth'
-import {
-  collection,
-  doc,
-  getDocs,
-  query,
-  setDoc,
-  deleteDoc,
-  getDoc,
-} from 'firebase/firestore'
-import { getRecipeRecommendations } from './groq.js'
 
 const style = {
   modal: {
@@ -131,68 +120,80 @@ export default function InventoryUI() {
     const [recipes, setRecipes] = useState('')
     const [recipeIndex, setRecipeIndex] = useState(0)
     const [error, setError] = useState(null)
+    const [message, setMessage] = useState(null)
+    
+    const fetchInventory = async () => {
+      const response = await fetch('/api/firebaseRoute');
+      const data = await response.json();
+      setInventory(data);
+    };
 
-
-    const updateInventory = async () => {
-        const snapshot = query(collection(firestore, 'inventory'))
-        const docs = await getDocs(snapshot)
-        const inventoryList = []
-        docs.forEach((doc) => {
-          inventoryList.push({ name: doc.id, ...doc.data() })
-        })
-        setInventory(inventoryList)
-      }
-      
       useEffect(() => {
-        updateInventory()
+        fetchInventory()
       }, [])
 
-      const addItem = async (item, new_quantity, food_category) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
-        const docSnap = await getDoc(docRef)
-        const newQuantity = parseInt(new_quantity, 10)
-        const foodCategory = food_category
-        if (docSnap.exists()) {
-          const { quantity } = docSnap.data()
-          const temp_quantity = parseInt(quantity, 10)
-          await setDoc(docRef, { quantity: temp_quantity + newQuantity, category: foodCategory})
+      const addItem = async () => {
+        const response = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ item: itemName.toLowerCase(), newQuantity: itemQuantity, foodCategory: itemCategory }),
+        });
+    
+        if (response.ok) {
+          const updatedInventory = await response.json();
+          setInventory(updatedInventory);
+          setItemName('');
+          setItemQuantity('');
+          setItemCategory('');
+          setError(null);
+          setMessage(null);
+          setOpen(false);
         } else {
-          await setDoc(docRef, { quantity: newQuantity, category: foodCategory})
+          setError('Failed to add item');
         }
-        await updateInventory()
-      }
+      };
       
-      const removeItem = async (item, food_category) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
-        const docSnap = await getDoc(docRef)
-        const foodCategory = food_category
-        if (docSnap.exists()) {
-          const { quantity } = docSnap.data()
-          if (quantity === 1) {
-            await deleteDoc(docRef)
-          } else {
-            await setDoc(docRef, { quantity: quantity - 1, category: foodCategory})
-          }
+      const removeItem = async (item, category) => {
+        const response = await fetch('/api/inventory', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ item, category }),
+        });
+    
+        if (response.ok) {
+          const updatedInventory = await response.json();
+          setInventory(updatedInventory);
+        } else {
+          setError('Failed to remove item');
         }
-        await updateInventory()
-      }
-
-      const handleOpen = () => {
-        setOpen(true)
-      }
-        const handleClose = () => setOpen(false)
+      };
 
       const handleGenerate = async () => {
-        const recommendations = await getRecipeRecommendations (inventory);
-        setRecipes(recommendations.choices[0]?.message?.content.split('%%%').filter(Boolean) || "No recommendations available.")
-        setRecipeIndex(1)
-      }
+        const response = await fetch('/api/groqRoute', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pantryItems: inventory }),
+        });
+      
+        if (response.ok) {
+          const recommendations = await response.json();
+          setRecipes(recommendations.choices[0]?.message?.content.split('%%%').filter(Boolean) || "No recommendations available.");
+          setRecipeIndex(0);
+        } else {
+        setError('Failed to get recipe recommendations');
+        }
+      };
 
       const handleRecipeOpen = async () => {
         await handleGenerate()
         setRecipeOpen(true)
       }
-      const handleRecipeClose = () => setRecipeOpen(false)
 
       const handleNextRecipe = () => {
         if (recipeIndex < recipes.length - 1) {
@@ -225,7 +226,7 @@ export default function InventoryUI() {
             <>
               <Modal
                 open={open}
-                onClose={handleClose}
+                onClose={() => setOpen(false)}
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
               >
@@ -280,7 +281,7 @@ export default function InventoryUI() {
                         variant="contained"
                         color="primary"
                         sx={style.button}
-                        onClick={() => setError("Camera feature coming soon!")}
+                        onClick={() => setMessage("Camera feature coming soon!")}
                       >
                       Camera
                       </Button>
@@ -288,18 +289,7 @@ export default function InventoryUI() {
                         variant="contained"
                         color="primary"
                         sx={style.button}
-                        onClick={() => {
-                            if (itemName) {
-                            addItem(itemName.toLowerCase(), itemQuantity, itemCategory);
-                            setItemName('');
-                            setItemQuantity('');
-                            setItemCategory('');
-                            setError(null);
-                            handleClose();
-                            } else {
-                            setError("Input item name to add item");
-                            }
-                        }}
+                        onClick={addItem}
                         >
                         Add
                         </Button>
@@ -309,23 +299,29 @@ export default function InventoryUI() {
                         sx={style.cancelButton}
                         onClick={ () => {
                             setError(null);
-                            handleClose();
+                            setOpen(false);
                         }}
                       >
                         Cancel
                       </Button>
                     </Stack>
-                    {error && (
-                        <Typography sx={{ mt: 2, color: 'red', textAlign: 'center' }}>
-                            {error}
+                    {message ? (
+                        <Typography color="error" variant="body2">
+                        {message}
                         </Typography>
-                    )}
+                    ) : (
+                    error && (
+                            <Typography color="error" variant="body2">
+                            {error}
+                            </Typography>
+                        ))
+                      }
                   </Stack>
                 </Box>
               </Modal>
               <Modal
                 open={recipeOpen}
-                onClose={handleRecipeClose}
+                onClose={() => setRecipeOpen(false)}
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
               >
@@ -360,7 +356,7 @@ export default function InventoryUI() {
                         variant="contained"
                         color="primary"
                         sx={style.button}
-                        onClick={handleRecipeClose}
+                        onClick={() => setRecipeOpen(false)}
                       >
                         Done
                       </Button>
@@ -436,7 +432,7 @@ export default function InventoryUI() {
           </Grid>
         </Box>
         <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-          <Button variant="contained" sx={style.button} onClick={handleOpen} startIcon={<AddCircle />}>
+          <Button variant="contained" sx={style.button} onClick={() => setOpen(true)} startIcon={<AddCircle />}>
             Add Item
           </Button>
           <Button variant="contained" sx={style.button} onClick={handleRecipeOpen} startIcon={<LightbulbCircle/>}>
