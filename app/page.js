@@ -6,7 +6,7 @@ import { auth } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState} from "react";
 import '@fontsource/poppins'
-import InventoryUI from './inventoryUI';
+import InventoryUI from './components/inventoryUI';
 
 export default function Home() {
   const [user, setUser] = useState(null);
