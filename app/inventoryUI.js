@@ -121,9 +121,10 @@ export default function InventoryUI() {
     const [recipeIndex, setRecipeIndex] = useState(0)
     const [error, setError] = useState(null)
     const [message, setMessage] = useState(null)
-    
+
+
     const fetchInventory = async () => {
-      const response = await fetch('/api/firebaseRoute');
+      const response = await fetch('/api/firebase');
       const data = await response.json();
       setInventory(data);
     };
@@ -133,7 +134,7 @@ export default function InventoryUI() {
       }, [])
 
       const addItem = async () => {
-        const response = await fetch('/api/inventory', {
+        const response = await fetch('/api/firebase', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ export default function InventoryUI() {
       };
       
       const removeItem = async (item, category) => {
-        const response = await fetch('/api/inventory', {
+        const response = await fetch('/api/firebase', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -173,7 +174,7 @@ export default function InventoryUI() {
       };
 
       const handleGenerate = async () => {
-        const response = await fetch('/api/groqRoute', {
+        const response = await fetch('/api/groq', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -248,7 +249,6 @@ export default function InventoryUI() {
                       id="item-quantity" 
                       label="Quantity"
                       variant="standard"
-                      defaultValue={1}
                       fullWidth
                       type='number'
                       value={itemQuantity}
@@ -281,7 +281,10 @@ export default function InventoryUI() {
                         variant="contained"
                         color="primary"
                         sx={style.button}
-                        onClick={() => setMessage("Camera feature coming soon!")}
+                        onClick={() => {
+                          setMessage("Camera feature coming soon!")
+                          setTimeout(() => setMessage(null), 3000);
+                        }}
                       >
                       Camera
                       </Button>
@@ -438,7 +441,7 @@ export default function InventoryUI() {
           <Button variant="contained" sx={style.button} onClick={handleRecipeOpen} startIcon={<LightbulbCircle/>}>
             Get Recipe Recommendation
           </Button>
-          <Button vairant="contained" sx={style.signOutButton} onClick={handleSignOut}>
+          <Button variant="contained" sx={style.signOutButton} onClick={handleSignOut}>
             Sign Out
             </Button>
             {error && (

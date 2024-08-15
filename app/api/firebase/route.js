@@ -8,51 +8,51 @@ import {
   deleteDoc,
   getDoc,
 } from 'firebase/firestore'
+import { NextResponse } from 'next/server';
 
 
-export default async function handler(req, res) {
-  if (req.method === 'GET')
-  {
-    const snapshot = await getDocs(collection(firestore, 'inventory'));
-    const inventoryList = [];
-    snapshot.forEach((doc) => {
-      inventoryList.push({ name: doc.id, ...doc.data() });
-    });
-    return res.status(200).json(inventoryList);
+export async function GET() {
+  const snapshot = await getDocs(collection(firestore, 'inventory'));
+  const inventoryList = [];
+  snapshot.forEach((doc) => {
+    inventoryList.push({ name: doc.id, ...doc.data() });
+  });
+  return NextResponse.json(inventoryList);
+}
+
+export async function POST(request) 
+{
+  const { item, newQuantity, foodCategory } = await request.json();
+  const docRef = doc(collection(firestore, 'inventory'), item);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const { quantity } = docSnap.data();
+    await setDoc(docRef, { quantity: quantity + newQuantity, category: foodCategory });
+  } else {
+    await setDoc(docRef, { quantity: newQuantity, category: foodCategory });
   }
-  else if (req.method === 'POST') 
-  {
-    const { item, newQuantity, foodCategory } = req.body;
-    const docRef = doc(collection(firestore, 'inventory'), item);
-    const docSnap = await getDoc(docRef);
+  return NextResponse.json({ message: 'Item added/updated successfully' });
+}
 
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data();
-      await setDoc(docRef, { quantity: quantity + newQuantity, category: foodCategory });
-    } else {
-      await setDoc(docRef, { quantity: newQuantity, category: foodCategory });
-    }
-    return res.status(200).json({ message: 'Item added/updated successfully' });
-  }
-  else if (req.method === 'DELETE') 
-  {
-    const { item, food_category } = req.body;
-    const docRef = doc(collection(firestore, 'inventory'), item);
-    const docSnap = await getDoc(docRef)
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data()
-      if (quantity === 1) {
-        await deleteDoc(docRef)
-        return res.status(200).json({ message: 'Item removed successfully' });
+export async function DELETE(request) {
+  const { item, food_category } = await request.json();
+  const docRef = doc(collection(firestore, 'inventory'), item);
+  const docSnap = await getDoc(docRef)
+  
+  if (docSnap.exists()) {
+    const { quantity } = docSnap.data()
+    if (quantity === 1) {
+      await deleteDoc(docRef)
+      return NextResponse.json({ message: 'Item removed successfully' });
       } else {
         await setDoc(docRef, { quantity: quantity - 1, category: food_category})
-        return res.status(200).json({ message: 'Item removed successfully' });
+        return NextResponse.json({ message: 'Item removed successfully' });
       }
-    }
-    else
-    {
-      return res.status(405).end();
-    }
+  }
+  else
+  {
+    return NextResponse.status(405).end();
   }
 }
 
