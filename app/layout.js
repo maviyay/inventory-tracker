@@ -2,6 +2,13 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
+import {
+  ClerkProvider,
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
 
 export const metadata = {
   title: "PantryPro",
@@ -11,8 +18,18 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
+    <ClerkProvider>
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <SignedOut>
+          <SignInButton />
+        </SignedOut>
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+        {children}
+      </body>
     </html>
+  </ClerkProvider>
   );
 }
