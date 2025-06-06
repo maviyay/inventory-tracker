@@ -14,7 +14,6 @@ import {
   deleteDoc,
   getDoc,
 } from 'firebase/firestore'
-import { getRecipeRecommendations } from './groq.js'
 
 const style = {
   modal: {
@@ -71,7 +70,7 @@ container: {
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   gap: 4,
-  color: '#fff', // Change text color for better contrast
+  color: '#fff',
 },
 
 paper: {
@@ -118,8 +117,47 @@ iconButton: {
 
 }
 
+function formatRecipe(recipeText) {
+  const lines = recipeText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+  let title = '';
+  const ingredients = [];
+  const steps = [];
+
+  let inIngredients = false;
+  let inSteps = false;
+
+  for (const line of lines) {
+    if (line.toLowerCase().startsWith('ingredients')) {
+      inIngredients = true;
+      inSteps = false;
+      continue;
+    }
+    if (line.toLowerCase().startsWith('steps')) {
+      inIngredients = false;
+      inSteps = true;
+      continue;
+    }
+
+    if (!inIngredients && !inSteps && title === '') {
+      title = line;
+      continue;
+    }
+
+    if (inIngredients) {
+      const cleanLine = line.replace(/^\* ?/, ''); // remove leading '* '
+      ingredients.push(cleanLine);
+    } else if (inSteps) {
+      const match = line.match(/^\d+\.\s?(.*)/); // lines like "1. Do this"
+      steps.push(match ? match[1] : line);
+    }
+  }
+
+  return { title, ingredients, steps };
+}
+
+
 export default function InventoryUI() {
-  // We'll add our component logic here
     const [inventory, setInventory] = useState([])
     const [open, setOpen] = useState(false)
     const [itemName, setItemName] = useState('')
@@ -183,10 +221,31 @@ export default function InventoryUI() {
         const handleClose = () => setOpen(false)
 
       const handleGenerate = async () => {
-        const recommendations = await getRecipeRecommendations (inventory);
-        setRecipes(recommendations.choices[0]?.message?.content.split('%%%').filter(Boolean) || "No recommendations available.")
-        setRecipeIndex(1)
-      }
+        try {
+          const res = await fetch('/api/recipes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventory }),
+          });
+
+          const data = await res.json();
+
+          if (data.error) {
+            console.error(data.error);
+            setRecipes(["Error: " + data.error]);
+            setRecipeIndex(1);
+            return;
+          }
+
+          const recipesList = data.content.split('%%%').filter(r => r.trim() !== '');
+          setRecipes(recipesList);
+          setRecipeIndex(1);
+        } catch (err) {
+          console.error("Error calling server:", err);
+          setRecipes(["Server error. Please try again."]);
+          setRecipeIndex(1);
+        }
+      };
 
       const handleRecipeOpen = async () => {
         await handleGenerate()
@@ -334,9 +393,33 @@ export default function InventoryUI() {
                     Your Recipe Recommendations
                   </Typography>
                   <Stack width="100%" spacing={2} justifyContent={"space-between"} sx={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    <Typography variant="body1">
-                            {recipes[recipeIndex]}
-                        </Typography>
+                    {(() => {
+                      const { title, ingredients, steps } = formatRecipe(recipes[recipeIndex] || '');
+                      return (
+                        <Box>
+                          <Typography variant="h6" gutterBottom>{title}</Typography>
+                          
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Ingredients:</Typography>
+                          <ul style={{ paddingLeft: '1.2em' }}>
+                            {ingredients.map((ing, idx) => (
+                              <li key={idx}>
+                                <Typography variant="body2">{ing}</Typography>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>Steps:</Typography>
+                          <ol style={{ paddingLeft: '1.2em' }}>
+                            {steps.map((step, idx) => (
+                              <li key={idx}>
+                                <Typography variant="body2">{step}</Typography>
+                              </li>
+                            ))}
+                          </ol>
+                        </Box>
+                      );
+                    })()}
+
                     <Stack direction="row" spacing={2} justifyContent="space-between">
                             <Button
                                 variant="contained"
